@@ -2,46 +2,37 @@ import React, { useState, useRef, useEffect } from 'react';
 
 /**
  * [Component] StartView
- * @description 서비스의 첫 인상을 결정하는 랜딩 페이지
- * @param {Function} onStart - 테스트 시작 버튼 클릭 시 실행될 함수
+ * @description 서비스의 첫 진입점. 깔끔하고 임팩트 있는 랜딩 페이지.
  */
-
 const StartView = ({ onStart }) => {
     return (
-        <div className="flex flex-col items-center justify-center h-screen bg-slate-50 animate-fade-in px-6">
-            {/* 데코레이션 요소 */}
-            <div className="mb-8 text-7xl animate-bounce">✨</div>
+        <div className="flex flex-col items-center justify-center h-screen bg-[#111827] text-white animate-fade-in overflow-hidden relative">
+            {/* 배경 데코레이션 (추후 서버 연동 시 애니메이션 효과 추가 가능) */}
+            <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-yellow-400/10 rounded-full blur-[120px]"></div>
+            <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/10 rounded-full blur-[120px]"></div>
 
-            {/* 메인 타이틀 영역 */}
-            <div className="text-center mb-12">
-                <h1 className="text-5xl font-black text-slate-900 mb-4 tracking-tight">
-                    카카오 이모티콘 <br/>
-                    <span className="text-yellow-500">실시간 시뮬레이터</span>
+            <div className="z-10 text-center">
+                <div className="inline-block px-4 py-1.5 mb-6 border border-yellow-400/30 rounded-full bg-yellow-400/5 text-yellow-400 text-xs font-bold tracking-widest uppercase">
+                    v1.0 Beta Simulator
+                </div>
+                <h1 className="text-6xl font-black mb-6 tracking-tighter">
+                    Emoticon <span className="text-yellow-400">Lab</span>
                 </h1>
-                <p className="text-lg text-slate-500 font-medium">
-                    제작한 이모티콘을 실제 채팅창 규격에 맞춰 <br/>
-                    미리 전송해보고 가이드라인을 체크하세요.
+                <p className="text-slate-400 text-lg mb-12 font-medium leading-relaxed">
+                    카카오 이모티콘 규격 검증 및 <br/>
+                    실시간 듀얼 시뮬레이션 환경을 경험하세요.
                 </p>
-            </div>
-
-            {/* 시작 버튼 */}
-            <button
-                onClick={onStart}
-                className="group relative flex items-center justify-center px-12 py-5 bg-yellow-400 hover:bg-yellow-500 text-slate-900 text-2xl font-black rounded-3xl transition-all shadow-[0_10px_30px_rgba(250,204,21,0.3)] hover:shadow-[0_15px_40px_rgba(250,204,21,0.4)] transform hover:-translate-y-1 active:scale-95"
-            >
-                테스트 시작하기
-                <span className="ml-3 transition-transform group-hover:translate-x-2">→</span>
-            </button>
-
-            {/* 하단 푸터 정보 (임시) */}
-            <div className="absolute bottom-10 text-slate-400 text-sm font-medium">
-                © 2026 Emoticon Test Tool. All rights reserved.
+                <button
+                    onClick={onStart}
+                    className="group relative inline-flex items-center justify-center px-10 py-4 bg-yellow-400 hover:bg-yellow-500 text-slate-900 text-xl font-black rounded-2xl transition-all shadow-[0_20px_40px_rgba(250,204,21,0.2)] hover:shadow-[0_25px_50px_rgba(250,204,21,0.3)] transform hover:-translate-y-1 active:scale-95"
+                >
+                    테스트 시작하기
+                    <span className="ml-3 transition-transform group-hover:translate-x-2">→</span>
+                </button>
             </div>
         </div>
     );
 };
-
-
 
 /**
  * [Sub Component] ChatScreen
@@ -160,57 +151,109 @@ const ChatScreen = ({ isMyPhone, messages, previews, onSendText, onSendEmoticon,
 
 /**
  * [Component] ChatView
- * @description 듀얼 폰 시뮬레이터 메인 컨테이너
+ * @description 듀얼 폰 시뮬레이터 메인 컨테이너 (고급 스튜디오 테마)
  */
 const ChatView = ({ files, previews, setStep }) => {
     const [messages, setMessages] = useState([]);
 
-    // 메시지 전송 로직: 발신자(sender) 정보를 함께 저장
     const sendMessage = (type, content, sender) => {
         const newMsg = {
             id: Date.now(),
             type,
             content,
-            sender, // 'A'는 내 폰, 'B'는 상대방 폰
+            sender,
             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })
         };
         setMessages(prev => [...prev, newMsg]);
     };
 
     return (
-        <div className="flex justify-center items-center h-screen bg-gray-100 animate-fade-in p-10 gap-10 overflow-x-auto">
-            {/* 📱 내 화면 (User A) */}
-            <div className="flex flex-col items-center shrink-0">
-                <h3 className="text-slate-700 font-bold mb-4 text-lg">📱 내 휴대폰</h3>
-                <div className="w-[380px] h-[750px] bg-white shadow-[0_20px_50px_rgba(0,0,0,0.15)] rounded-[3.5rem] border-[14px] border-gray-900 overflow-hidden relative">
-                    <ChatScreen
-                        isMyPhone={true}
-                        messages={messages}
-                        previews={previews}
-                        onSendText={(txt) => sendMessage('text', txt, 'A')}
-                        onSendEmoticon={(idx) => sendMessage('emoticon', previews[idx], 'A')}
-                        setStep={setStep}
-                    />
-                </div>
-            </div>
+        <div className="flex flex-col h-screen bg-[#0F172A] animate-fade-in relative overflow-hidden">
+            {/* 1. 배경 그리드 패턴 (디자인 툴 느낌) */}
+            <div className="absolute inset-0" style={{
+                backgroundImage: 'radial-gradient(#334155 1px, transparent 1px)',
+                backgroundSize: '30px 30px',
+                opacity: 0.3
+            }}></div>
 
-            {/* 📱 상대방 화면 (User B) */}
-            <div className="flex flex-col items-center shrink-0">
-                <h3 className="text-slate-700 font-bold mb-4 text-lg">📱 상대방 휴대폰</h3>
-                <div className="w-[380px] h-[750px] bg-white shadow-[0_20px_50px_rgba(0,0,0,0.15)] rounded-[3.5rem] border-[14px] border-gray-900 overflow-hidden relative">
-                    <ChatScreen
-                        isMyPhone={false}
-                        messages={messages}
-                        previews={previews}
-                        onSendText={(txt) => sendMessage('text', txt, 'B')}
-                        onSendEmoticon={(idx) => sendMessage('emoticon', previews[idx], 'B')}
-                        setStep={setStep}
-                    />
+            {/* 2. 상단 네비게이션 바 (Simulator 전용) */}
+            <header className="z-20 flex items-center justify-between px-8 py-4 bg-slate-900/50 backdrop-blur-xl border-b border-slate-700/50">
+                <div className="flex items-center space-x-4">
+                    <div className="flex space-x-2">
+                        <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
+                        <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
+                        <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
+                    </div>
+                    <span className="text-slate-400 text-sm font-bold tracking-widest ml-4 border-l border-slate-700 pl-4 uppercase">
+                        Dual-Device Simulator
+                    </span>
                 </div>
-            </div>
+                <div className="flex items-center space-x-6">
+                    <div className="text-slate-400 text-xs font-medium">
+                        Session: <span className="text-yellow-400">Live Syncing...</span>
+                    </div>
+                    <button
+                        onClick={() => setStep('upload')}
+                        className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-lg transition-colors border border-slate-600"
+                    >
+                        Exit Simulator
+                    </button>
+                </div>
+            </header>
+
+            {/* 3. 메인 시뮬레이션 영역 */}
+            <main className="flex-1 flex justify-center items-center gap-16 p-10 overflow-x-auto z-10">
+                {/* 📱 내 휴대폰 (User A) */}
+                <div className="flex flex-col items-center shrink-0">
+                    <div className="mb-6 px-4 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-black uppercase tracking-tighter">
+                        Local Device (Sender)
+                    </div>
+                    <div className="w-[380px] h-[780px] bg-white shadow-[0_0_100px_rgba(0,0,0,0.5),0_0_20px_rgba(59,130,246,0.2)] rounded-[3.5rem] border-[14px] border-slate-800 overflow-hidden relative transition-transform hover:scale-[1.01]">
+                        <ChatScreen
+                            isMyPhone={true}
+                            messages={messages}
+                            previews={previews}
+                            onSendText={(txt) => sendMessage('text', txt, 'A')}
+                            onSendEmoticon={(idx) => sendMessage('emoticon', previews[idx], 'A')}
+                            setStep={setStep}
+                        />
+                    </div>
+                </div>
+
+                {/* 중앙 연결 데코레이션 */}
+                <div className="hidden xl:flex flex-col items-center text-slate-600">
+                    <div className="w-1 h-20 bg-gradient-to-b from-blue-500/50 to-purple-500/50 rounded-full"></div>
+                    <span className="my-4 font-black text-xs tracking-widest opacity-30">SYNC</span>
+                    <div className="w-1 h-20 bg-gradient-to-t from-blue-500/50 to-purple-500/50 rounded-full"></div>
+                </div>
+
+                {/* 📱 상대방 휴대폰 (User B) */}
+                <div className="flex flex-col items-center shrink-0">
+                    <div className="mb-6 px-4 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-xs font-black uppercase tracking-tighter">
+                        Remote Device (Mirror)
+                    </div>
+                    <div className="w-[380px] h-[780px] bg-white shadow-[0_0_100px_rgba(0,0,0,0.5),0_0_20px_rgba(168,85,247,0.2)] rounded-[3.5rem] border-[14px] border-slate-800 overflow-hidden relative opacity-95 transition-transform hover:scale-[1.01]">
+                        <ChatScreen
+                            isMyPhone={false}
+                            messages={messages}
+                            previews={previews}
+                            onSendText={(txt) => sendMessage('text', txt, 'B')}
+                            onSendEmoticon={(idx) => sendMessage('emoticon', previews[idx], 'B')}
+                            setStep={setStep}
+                        />
+                    </div>
+                </div>
+            </main>
+
+            {/* 하단 정보 바 */}
+            <footer className="z-20 px-8 py-3 bg-slate-900/80 backdrop-blur-md border-t border-slate-800 flex justify-between items-center text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+                <div>Active Assets: {files.length} Files Loaded</div>
+                <div>Internal Latency: 0.001ms (Local Loop)</div>
+            </footer>
         </div>
     );
 };
+
 
 // --- App 메인 컴포넌트 (동일) ---
 function App() {
