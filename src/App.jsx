@@ -11,7 +11,7 @@ const StartView = ({ onStart }) => {
         <div className="flex flex-col items-center justify-center h-screen bg-slate-50 animate-fade-in px-6">
             {/* 데코레이션 요소 */}
             <div className="mb-8 text-7xl animate-bounce">✨</div>
-sdf
+
             {/* 메인 타이틀 영역 */}
             <div className="text-center mb-12">
                 <h1 className="text-5xl font-black text-slate-900 mb-4 tracking-tight">
