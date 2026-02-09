@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-
+import { uploadEmoticon } from './api';
 /**
  * [Component] StartView
  * @description 서비스의 첫 진입점. 깔끔하고 임팩트 있는 랜딩 페이지.
@@ -260,16 +260,74 @@ function App() {
     const [step, setStep] = useState('start');
     const [files, setFiles] = useState([]);
     const [previews, setPreviews] = useState([]);
+    const [results, setResults] = useState({});
+    const [selectedError, setSelectedError] = useState(null);
     const fileInputRef = useRef(null);
+    const [detailInfo, setDetailInfo] = useState(null);
 
     const handleUploadClick = () => { fileInputRef.current?.click(); };
-    const handleFileChange = (event) => {
+    const handleFileChange = async (event) => {
         const selectedFiles = Array.from(event.target.files);
         if (selectedFiles.length === 0) return;
+
         setFiles(prev => [...prev, ...selectedFiles].slice(0, 32));
         event.target.value = '';
+
+        for (const file of selectedFiles) {
+            // 1. 일단 "로딩중" 상태로 표시
+            setResults(prev => ({ ...prev, [file.name]: { status: 'LOADING' } }));
+
+            // 2. 백엔드 API 호출 (Dongjun ID로 전송)
+            const result = await uploadEmoticon('Dongjun', file);
+
+            // 3. 결과(성공/실패) 저장
+            setResults(prev => ({
+                ...prev,
+                [file.name]: {
+                    status: result.status,
+                    msg: result.errorMessage
+                }
+            }));
+        }
     };
     const handleRemoveFile = (index) => { setFiles(prev => prev.filter((_, i) => i !== index)); };
+
+    const handleGridClick = (file, previewUrl) => {
+        const res = results[file.name] || { status: 'WAITING', msg: '아직 분석 전입니다.' };
+
+        // 1. 공통으로 사용할 기본 정보 (이미지가 아니어도 알 수 있는 것들)
+        const baseInfo = {
+            name: file.name,
+            size: (file.size / 1024).toFixed(1) + ' KB',
+            type: file.type || 'unknown',
+            width: 'N/A',
+            height: 'N/A',
+            preview: previewUrl,
+            status: res.status,
+            message: res.msg
+        };
+
+        // 2. 이미지 파일인 경우에만 해상도 추출 시도
+        if (file.type.startsWith('image/')) {
+            const img = new Image();
+            img.src = previewUrl;
+
+            img.onload = () => {
+                // 이미지 로드 성공 시 해상도 포함해서 팝업 오픈
+                setDetailInfo({ ...baseInfo, width: img.width, height: img.height });
+            };
+
+            img.onerror = () => {
+                // 이미지 로드 실패 시(부서진 이미지 등) 기본 정보만으로 팝업 오픈
+                setDetailInfo(baseInfo);
+            };
+        } else {
+            // 3. 이미지가 아닌 경우(txt 등) 즉시 기본 정보로 팝업 오픈
+            setDetailInfo(baseInfo);
+        }
+    };
+
+
 
     useEffect(() => {
         if (files.length === 0) { setPreviews([]); return; }
@@ -278,8 +336,81 @@ function App() {
         return () => newPreviews.forEach(url => URL.revokeObjectURL(url));
     }, [files]);
 
+    const isAnalyzing = files.some(f => results[f.name]?.status === 'LOADING' || !results[f.name]);
+    const isReady = files.length > 0 && !isAnalyzing;
+
+    const getButtonText = () => {
+        if (files.length === 0) return "파일을 업로드해주세요";
+        if (isAnalyzing) return "⏳ 분석 중입니다...";
+        return "🚀 시뮬레이션 시작";
+    };
+
     return (
         <div className="w-full h-screen overflow-hidden bg-white font-sans">
+            {selectedError && (
+                <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setSelectedError(null)}>
+                    <div className="bg-white p-8 rounded-3xl shadow-2xl max-w-md w-full" onClick={e => e.stopPropagation()}>
+                        <h3 className="text-xl font-black text-red-500 mb-4">🚨 검증 실패</h3>
+                        <pre className="bg-slate-100 p-4 rounded-xl text-slate-700 whitespace-pre-wrap font-mono text-sm mb-6">
+                        {selectedError}
+                    </pre>
+                        <button onClick={() => setSelectedError(null)} className="w-full py-3 bg-slate-800 text-white font-bold rounded-xl">확인</button>
+                    </div>
+                </div>
+            )}
+
+            {detailInfo && (
+                <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setDetailInfo(null)}>
+                    <div className="bg-white rounded-3xl shadow-2xl overflow-hidden max-w-2xl w-full flex flex-col md:flex-row m-4" onClick={e => e.stopPropagation()}>
+
+                        {/* 왼쪽: 이미지 크게 보기 */}
+                        <div className="w-full md:w-1/2 bg-slate-100 flex items-center justify-center p-8 border-r border-slate-200">
+                            <img src={detailInfo.preview} alt="detail" className="max-w-full max-h-[300px] object-contain drop-shadow-md" />
+                        </div>
+
+                        {/* 오른쪽: 스펙 정보 */}
+                        <div className="w-full md:w-1/2 p-8 flex flex-col justify-center">
+                            <div className="mb-6">
+                                <h3 className="text-2xl font-black text-slate-800 mb-1 truncate">{detailInfo.name}</h3>
+                                <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider
+                        ${detailInfo.status === 'SUCCESS' ? 'bg-green-100 text-green-600' :
+                                    detailInfo.status === 'FAILED' ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-500'}`}>
+                        {detailInfo.status === 'SUCCESS' ? 'Pass ✅' : detailInfo.status === 'FAILED' ? 'Fail ⚠️' : 'Analyzing...'}
+                    </span>
+                            </div>
+
+                            <div className="space-y-4 text-sm text-slate-600">
+                                <div className="flex justify-between border-b border-slate-100 pb-2">
+                                    <span className="font-semibold text-slate-400">Resolution</span>
+                                    <span className="font-mono font-bold text-slate-700">{detailInfo.width} x {detailInfo.height} px</span>
+                                </div>
+                                <div className="flex justify-between border-b border-slate-100 pb-2">
+                                    <span className="font-semibold text-slate-400">File Size</span>
+                                    <span className="font-mono font-bold text-slate-700">{detailInfo.size}</span>
+                                </div>
+                                <div className="flex justify-between border-b border-slate-100 pb-2">
+                                    <span className="font-semibold text-slate-400">Type</span>
+                                    <span className="font-mono font-bold text-slate-700">{detailInfo.type}</span>
+                                </div>
+                            </div>
+
+                            {/* 에러가 있다면 메시지 표시 */}
+                            {detailInfo.status === 'FAILED' && (
+                                <div className="mt-6 bg-red-50 p-4 rounded-xl border border-red-100">
+                                    <p className="text-xs font-bold text-red-500 mb-1">🚨 Issue Detected</p>
+                                    <p className="text-xs text-red-600 whitespace-pre-wrap">{detailInfo.message}</p>
+                                </div>
+                            )}
+
+                            <button onClick={() => setDetailInfo(null)} className="mt-8 w-full py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition-all">
+                                닫기
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+
             <input type="file" ref={fileInputRef} onChange={handleFileChange} multiple accept="image/png, image/gif" className="hidden" />
             {step === 'start' ? (
                 <StartView onStart={() => setStep('upload')} />
@@ -294,7 +425,11 @@ function App() {
                         </div>
                         <div className="grid grid-cols-4 gap-x-6 gap-y-12 overflow-y-auto flex-1 px-2 py-4 content-start min-h-0 scrollbar-hide">
                             {[...Array(32)].map((_, i) => (
-                                <div key={`slot-${i}`} className="relative w-full aspect-square bg-white rounded-2xl border border-slate-200 shadow-sm transition-all group hover:border-yellow-400 hover:shadow-md">
+                                <div key={`slot-${i}`}
+                                     onClick={() => previews[i] && handleGridClick(files[i], previews[i])}
+                                     className={`relative w-full aspect-square bg-white rounded-2xl border border-slate-200 shadow-sm transition-all group 
+             ${previews[i] ? 'cursor-zoom-in hover:border-blue-400 hover:shadow-md' : 'hover:border-yellow-400'}`} // 커서 모양 변경
+                                >
                                     {previews[i] ? (
                                         <>
                                             <div className="absolute inset-0 p-4 flex items-center justify-center"><img src={previews[i]} alt="" className="max-w-full max-h-full object-contain" /></div>
@@ -312,16 +447,49 @@ function App() {
                         <div className="flex-1 bg-slate-50 border border-slate-200 rounded-3xl p-6 overflow-y-auto mb-8 shadow-inner">
                             {files.length === 0 ? <p className="text-slate-300 text-center mt-20 font-medium">업로드된 파일이 없습니다.</p> : (
                                 <div className="space-y-3">
-                                    {files.map((file, i) => (
-                                        <div key={`list-${i}`} className="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                                            <div className="flex items-center space-x-3 truncate text-slate-700 font-semibold"><span className="text-yellow-500 font-black w-5">{i+1}</span>{file.name}</div>
-                                            <button onClick={() => handleRemoveFile(i)} className="text-slate-300 hover:text-red-500 transition-colors">✕</button>
-                                        </div>
-                                    ))}
+                                    {files.map((file, i) => {
+
+                                        const res = results[file.name] || {status: 'WAITING'};
+
+                                        return (
+                                            <div key={file.name}
+                                                 onClick={() => handleGridClick(file, previews[i])}
+                                                 className={`flex items-center justify-between p-4 rounded-2xl border shadow-sm transition-all cursor-pointer hover:shadow-md hover:scale-[1.02]
+                    ${res.status === 'FAILED' ? 'bg-red-50 border-red-200' : 'bg-white border-slate-100 hover:border-blue-300'}`}
+                                            >
+                                                <div className="flex items-center space-x-3 truncate text-slate-700 font-semibold">
+                                                    <span className="text-yellow-500 font-black w-5">{i + 1}</span>
+                                                    <span className="truncate">{file.name}</span>
+                                                </div>
+
+                                                <div className="flex items-center space-x-2">
+                                                    {res.status === 'LOADING' && <span className="text-slate-400 text-xs animate-pulse">분석중...</span>}
+                                                    {res.status === 'WAITING' && <span className="text-slate-300 text-xs">대기중</span>}
+                                                    {res.status === 'SUCCESS' && <span className="text-green-500 font-bold text-xs">PASS ✅</span>}
+                                                    {res.status === 'FAILED' && (
+                                                        <span className="bg-red-100 text-red-600 px-2 py-1 rounded-full text-xs font-bold">
+                                                            실패 ⚠️
+                                                        </span>
+                                                    )}
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); handleRemoveFile(i); }}
+                                                        className="text-slate-300 hover:text-red-500 ml-1 transition-colors p-1 hover:bg-slate-100 rounded-full"
+                                                    >✕
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
-                            )}
+                                )}
                         </div>
-                        <button onClick={() => setStep('chat')} disabled={files.length === 0} className={`w-full py-6 text-xl font-black rounded-3xl transition-all shadow-xl ${files.length > 0 ? 'bg-yellow-400 hover:bg-yellow-500 text-slate-900 transform hover:-translate-y-1' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}>🚀 시뮬레이션 시작</button>
+                        <button onClick={() => setStep('chat')}
+                                disabled={!isReady}
+                                className={`w-full py-6 text-xl font-black rounded-3xl transition-all shadow-xl 
+                                ${isReady ? 'bg-yellow-400 hover:bg-yellow-500 text-slate-900 transform hover:-translate-y-1' 
+                                    : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                                }`}> {getButtonText()}
+                        </button>
                     </div>
                 </div>
             ) : (
