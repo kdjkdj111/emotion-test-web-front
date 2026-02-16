@@ -94,13 +94,14 @@ export default function App() {
 
     // [삭제] 특정 인덱스의 파일 제거
     const handleRemoveFile = (index) => {
-        const fileNameToRemove = files[index].name;
+        const fileIdToRemove = files[index].id;
+
         setFiles(prev => prev.filter((_, i) => i !== index));
 
         // 결과 데이터에서도 삭제
         setResults(prev => {
             const newResults = { ...prev };
-            delete newResults[fileNameToRemove];
+            delete newResults[fileIdToRemove];
             return newResults;
         });
     };
@@ -160,7 +161,7 @@ export default function App() {
     // -------------------------------------------------------------------------
 
     // 분석 중인 파일이 하나라도 있는지 확인
-    const isAnalyzing = files.some(f => results[f.name]?.status === 'LOADING' || !results[f.name]);
+    const isAnalyzing = files.some(f => results[f.id]?.status === 'LOADING' || !results[f.id]);
 
     // 시뮬레이션 시작 버튼 활성화 조건
     const isReady = files.length > 0 && !isAnalyzing;
