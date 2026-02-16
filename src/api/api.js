@@ -7,11 +7,12 @@ const API_BASE_URL = 'http://localhost:8080/api/emoticons';
  * @param {File} file - 이미지 파일
  * @param {string} type - 이모티콘 종류 (STILL, ANIMATED, MINI 등) [추가]
  */
-export const uploadEmoticon = async (userId, file, type = 'STILL') => { // 기본값은 정지형
+export const uploadEmoticon = async (userId, file, type, fileId) => {
     const formData = new FormData();
     formData.append('userId', userId);
     formData.append('file', file);
-    formData.append('type', type); // [추가] 서버로 종류 정보 전송
+    formData.append('type', type);
+    formData.append('fileId', fileId);
 
     try {
         const response = await axios.post(`${API_BASE_URL}/upload`, formData, {
@@ -23,7 +24,7 @@ export const uploadEmoticon = async (userId, file, type = 'STILL') => { // 기�
         return {
             fileName: file.name,
             status: 'FAILED',
-            errorMessage: '서버와 통신할 수 없습니다. (네트워크 확인)'
+            errorMessage: '부적절한 파일 업로드 (기본 양식 확인)'
         };
     }
 };

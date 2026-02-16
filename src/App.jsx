@@ -1,47 +1,84 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { uploadEmoticon } from './api/api.js'; // 파일 경로 확인하세요!
 import StartView from './views/StartView';
+import TypeSelectionView from './views/TypeSelectionView';
 import UploadView from './views/UploadView';
 import ChatView from './views/ChatView';
 import DetailModal from './components/upload/DetailModal';
+import { authService } from './utils/auth';
+import ConfirmModal from './components/upload/ConfirmModal';
+
 
 export default function App() {
     // -------------------------------------------------------------------------
     // 1. 상태 관리 (State Management)
     // -------------------------------------------------------------------------
     const [step, setStep] = useState('start');
+    const [emoticonType, setEmoticonType] = useState('STILL');
     const [files, setFiles] = useState([]);
     const [previews, setPreviews] = useState([]);
     const [results, setResults] = useState({});
     const [detailInfo, setDetailInfo] = useState(null);
     const fileInputRef = useRef(null);
+    const [userId] = useState(() => authService.getUserId());
+    const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+
+    //초기화 실행 로직
+    const executeReset = () => {
+        // 메모리 해제 (미리보기 URL 제거)
+        previews.forEach(url => URL.revokeObjectURL(url));
+
+        // 모든 상태 초기화
+        setFiles([]);
+        setPreviews([]);
+        setResults({});
+        setDetailInfo(null);
+
+        // Input 필드 초기화
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+
+        // 모달 닫기
+        setIsConfirmOpen(false);
+    };
 
     // -------------------------------------------------------------------------
     // 2. 파일 핸들러 (File Handlers)
     // -------------------------------------------------------------------------
+
+    // [타입 선택] 4종류 타입 선택
+    const handleTypeSelect = (typeId) => {
+        setEmoticonType(typeId); // 선택한 타입을 저장
+        setStep('upload');       // 업로드 화면으로 이동
+    };
 
     // [업로드] 파일 선택 시 실행되는 로직
     const handleFileChange = async (event) => {
         const selectedFiles = Array.from(event.target.files);
         if (selectedFiles.length === 0) return;
 
-        // 최대 32개까지만 유지
-        const newFileList = [...files, ...selectedFiles].slice(0, 32);
-        setFiles(newFileList);
-        event.target.value = ''; // 같은 파일 재업로드 가능하도록 초기화
+        // 1. [핵심] 각 파일에 고유 ID(UUID)를 미리 부여합니다.
+        const filesWithId = selectedFiles.map(file => ({
+            id: crypto.randomUUID(), // 이 파일만의 고유 주민번호
+            file: file,              // 실제 파일 데이터
+            name: file.name          // 화면 표시용 이름
+        }));
 
-        // 각 파일별로 백엔드 분석 요청
-        for (const file of selectedFiles) {
-            // 로딩 상태 표시
-            setResults(prev => ({ ...prev, [file.name]: { status: 'LOADING' } }));
+        // 2. 최대 32개까지만 유지 (기존 파일 + 새 파일)
+        setFiles(prev => [...prev, ...filesWithId].slice(0, 32));
+        event.target.value = '';
+
+        // 3. 파일별로 분석 요청
+        for (const item of filesWithId) {
+            setResults(prev => ({ ...prev, [item.id]: { status: 'LOADING' } }));
 
             try {
-                // API 호출 (현재는 STILL 타입 고정)
-                const result = await uploadEmoticon('Dongjun', file, 'STILL');
+                const result = await uploadEmoticon(userId, item.file, emoticonType, item.id);
 
                 setResults(prev => ({
                     ...prev,
-                    [file.name]: {
+                    [item.id]: {
                         status: result.status,
                         msg: result.errorMessage
                     }
@@ -49,7 +86,7 @@ export default function App() {
             } catch (error) {
                 setResults(prev => ({
                     ...prev,
-                    [file.name]: { status: 'FAILED', msg: '통신 에러가 발생했습니다.' }
+                    [item.id]: { status: 'FAILED', msg: '통신 에러가 발생했습니다.' }
                 }));
             }
         }
@@ -68,14 +105,18 @@ export default function App() {
         });
     };
 
+    const handleResetRequest = () => {
+        setIsConfirmOpen(true); // 모달을 띄웁니다.
+    };
+
     // [상세보기] 그리드 아이템 클릭 시 해상도 추출 및 모달 오픈
-    const handleGridClick = (file, previewUrl) => {
-        const res = results[file.name] || { status: 'WAITING', msg: '분석 대기 중입니다.' };
+    const handleGridClick = (item, previewUrl) => {
+        const res = results[item.id] || { status: 'WAITING', msg: '분석 대기 중입니다.' };
 
         const baseInfo = {
-            name: file.name,
-            size: (file.size / 1024).toFixed(1) + ' KB',
-            type: file.type || 'unknown',
+            name: item.name,
+            size: (item.file.size / 1024).toFixed(1) + ' KB',
+            type: item.file.type || 'unknown',
             width: 'N/A',
             height: 'N/A',
             preview: previewUrl,
@@ -84,7 +125,7 @@ export default function App() {
         };
 
         // 이미지 파일이면 실제 해상도 계산
-        if (file.type?.startsWith('image/')) {
+        if (item.file.type?.startsWith('image/')) {
             const img = new Image();
             img.src = previewUrl;
             img.onload = () => {
@@ -107,7 +148,7 @@ export default function App() {
             return;
         }
 
-        const newPreviews = files.map(file => URL.createObjectURL(file));
+        const newPreviews = files.map(item => URL.createObjectURL(item.file));
         setPreviews(newPreviews);
 
         // Cleanup: 브라우저 메모리 누수 방지
@@ -145,22 +186,34 @@ export default function App() {
                 className="hidden"
             />
 
-            {/* 메인 화면 라우팅 */}
+            {/* 1. 시작 화면 */}
             {step === 'start' && (
-                <StartView onStart={() => setStep('upload')} />
+                <StartView onStart={() => setStep('select')} />
             )}
 
+            {/* 2. 종류 선택 화면 */}
+            {step === 'select' && (
+                <TypeSelectionView
+                    onSelect={handleTypeSelect}
+                    onBack={() => setStep('start')}
+                />
+            )}
+
+            {/* 3. 업로드 화면 */}
             {step === 'upload' && (
                 <UploadView
+                    selectedType={emoticonType}
                     files={files}
                     previews={previews}
                     results={results}
                     handleUploadClick={() => fileInputRef.current?.click()}
                     handleGridClick={handleGridClick}
                     handleRemoveFile={handleRemoveFile}
+                    handleReset={handleResetRequest}
                     isReady={isReady}
                     getButtonText={getButtonText()}
                     setStep={setStep}
+                    onBack={() => setStep('select')}
                 />
             )}
 
@@ -171,6 +224,15 @@ export default function App() {
                     setStep={setStep}
                 />
             )}
+
+            {/* 공통 확인 모달 (맨 아래 배치) */}
+            <ConfirmModal
+                isOpen={isConfirmOpen}
+                title="전체 초기화"
+                message="업로드된 모든 파일과 분석 결과가 삭제됩니다. 정말 초기화할까요?"
+                onConfirm={executeReset} // 실제 삭제 로직 실행
+                onCancel={() => setIsConfirmOpen(false)} // 그냥 닫기
+            />
 
             {/* 공통 상세 정보 모달 */}
             {detailInfo && (
