@@ -1,25 +1,29 @@
 import axios from 'axios';
 
-// 백엔드 주소
 const API_BASE_URL = 'http://localhost:8080/api/emoticons';
 
-export const uploadEmoticon = async (userId, file) => {
+/**
+ * @param {string} userId - 사용자 ID
+ * @param {File} file - 이미지 파일
+ * @param {string} type - 이모티콘 종류 (STILL, ANIMATED, MINI 등) [추가]
+ */
+export const uploadEmoticon = async (userId, file, type = 'STILL') => { // 기본값은 정지형
     const formData = new FormData();
     formData.append('userId', userId);
     formData.append('file', file);
+    formData.append('type', type); // [추가] 서버로 종류 정보 전송
 
     try {
         const response = await axios.post(`${API_BASE_URL}/upload`, formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
         });
-        return response.data; // { fileName, status, errorMessage } 반환
+        return response.data;
     } catch (error) {
         console.error("업로드 실패:", error);
-        // 서버가 죽었거나 네트워크 오류일 때 가짜 실패 응답 생성
         return {
             fileName: file.name,
             status: 'FAILED',
-            errorMessage: '서버와 통신할 수 없습니다.'
+            errorMessage: '서버와 통신할 수 없습니다. (네트워크 확인)'
         };
     }
 };
