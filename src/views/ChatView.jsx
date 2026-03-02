@@ -50,7 +50,7 @@ const ChatView = ({ files, previews, setStep, handleReset }) => {
                             <span className="text-[12px] font-bold group-hover:text-white transition-colors tracking-tighter">← 업로드 화면으로</span>
                         </button>
                         <div>
-                            <span className="text-slate-900 text-lg font-extrabold tracking-tighter">3. 시뮬레이션 모드</span>
+                            <span className="text-slate-900 text-lg font-extrabold tracking-tighter">시뮬레이션 모드</span>
                             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest opacity-80">이모티콘 실제 적용 및 테마 가독성 정밀 검수</p>
                         </div>
                     </div>
@@ -113,8 +113,8 @@ const ChatView = ({ files, previews, setStep, handleReset }) => {
 
                         <div className="flex-1 p-8 overflow-y-auto scrollbar-hide">
                             <div className="mb-10 flex flex-col gap-1">
-                                <h3 className="text-[11px] font-extrabold text-slate-900 uppercase tracking-[0.2em]">상세 설정</h3>
-                                <p className="text-[10px] text-blue-500 font-bold uppercase tracking-widest">{activeTab === 'SENDER' ? '보내는 사람' : '받는 사람'} 환경 편집 중</p>
+                                <h3 className="text-[15px] font-extrabold text-slate-900 uppercase tracking-widest">상세 설정</h3>
+                                <p className="text-[12px] text-blue-500 font-bold uppercase tracking-widest">{activeTab === 'SENDER' ? '보내는 사람' : '받는 사람'} 환경 편집 중</p>
                             </div>
 
                             <section className="space-y-12">
