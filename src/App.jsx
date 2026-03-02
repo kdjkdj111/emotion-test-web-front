@@ -39,6 +39,10 @@ export default function App() {
             fileInputRef.current.value = '';
         }
 
+        if (step === 'chat') {
+            setStep('start');
+        }
+
         // 모달 닫기
         setIsConfirmOpen(false);
     };
@@ -223,6 +227,7 @@ export default function App() {
                     files={files}
                     previews={previews}
                     setStep={setStep}
+                    handleReset={handleResetRequest}
                 />
             )}
 
