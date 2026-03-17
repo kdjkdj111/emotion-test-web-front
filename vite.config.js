@@ -6,6 +6,7 @@ export default defineConfig({
   plugins: [react()],
   server: {
     allowedHosts: [
+      '.loca.lt',
       'ila-untransfused-dorotha.ngrok-free.dev'
     ]
   }

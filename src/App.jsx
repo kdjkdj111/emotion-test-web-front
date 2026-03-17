@@ -10,6 +10,7 @@ import ChatView from './views/ChatView';
 import DetailModal from './components/upload/DetailModal';
 import { authService } from './utils/auth';
 import ConfirmModal from './components/upload/ConfirmModal';
+import HistoryView from './views/HistoryView';
 
 export default function App() {
     // -------------------------------------------------------------------------
@@ -23,6 +24,7 @@ export default function App() {
     const [detailInfo, setDetailInfo] = useState(null);
     const fileInputRef = useRef(null);
     const [userId] = useState(() => authService.getUserId());
+    const [projectId, setProjectId] = useState(() => crypto.randomUUID());
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
     // [로직] 초기화 실행
@@ -32,6 +34,7 @@ export default function App() {
         if (fileInputRef.current) fileInputRef.current.value = '';
         if (step === 'chat') setStep('start');
         setIsConfirmOpen(false);
+        setProjectId(crypto.randomUUID());
     };
 
     // -------------------------------------------------------------------------
@@ -55,7 +58,7 @@ export default function App() {
             setResults(prev => ({ ...prev, [item.id]: { status: 'LOADING' } }));
             try {
                 // 백엔드 API 호출 (영어 코드 기반 결과 반환 기대)
-                const result = await uploadEmoticon(userId, item.file, emoticonType, item.id);
+                const result = await uploadEmoticon(userId, projectId, item.file, emoticonType, item.id);
                 setResults(prev => ({
                     ...prev,
                     [item.id]: { status: result.status, msg: result.errorMessage }
@@ -142,7 +145,8 @@ export default function App() {
         handleUploadClick: () => fileInputRef.current?.click(),
         handleGridClick, handleRemoveFile, handleDrop, handleDragOver,
         handleReset: () => setIsConfirmOpen(true),
-        setStep, onBack: () => setStep('select')
+        setStep, onBack: () => setStep('select'),
+        onViewHistory: () => setStep('history')
     };
 
     // -------------------------------------------------------------------------
@@ -171,6 +175,14 @@ export default function App() {
                     default:         return <StillUploadView {...commonUploadProps} selectedType={emoticonType} />;
                 }
             })()}
+
+            {step === 'history' && (
+                <HistoryView
+                    userId={userId} // 🚀 [NEW] userId 추가!
+                    projectId={projectId}
+                    onBack={() => setStep('upload')}
+                />
+            )}
 
             {step === 'chat' && <ChatView files={files} previews={previews} setStep={setStep} handleReset={() => setIsConfirmOpen(true)} />}
 
